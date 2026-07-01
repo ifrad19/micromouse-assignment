@@ -1,0 +1,24 @@
+{
+  "planner": "astar",
+  "n_waypoints": 28,
+  "path_length": 27.0,
+  "plan_time_s": 0.0001621246337890625,
+  "n_turns": 10,
+  "total_turn_deg": 900.0,
+  "success": true,
+  "path_length_cells": 27.0,
+  "maze": "narrow",
+  "maze_summary": {
+    "name": "narrow",
+    "rows": 16,
+    "cols": 16,
+    "start_rc": [
+      1,
+      1
+    ],
+    "goal_rc": [
+      13,
+      14
+    ]
+  }
+}

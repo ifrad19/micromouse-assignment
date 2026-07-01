@@ -1,0 +1,24 @@
+{
+  "planner": "astar",
+  "n_waypoints": 44,
+  "path_length": 43.0,
+  "plan_time_s": 0.0001461505889892578,
+  "n_turns": 8,
+  "total_turn_deg": 720.0,
+  "success": true,
+  "path_length_cells": 43.0,
+  "maze": "spiral",
+  "maze_summary": {
+    "name": "spiral",
+    "rows": 16,
+    "cols": 16,
+    "start_rc": [
+      1,
+      1
+    ],
+    "goal_rc": [
+      10,
+      1
+    ]
+  }
+}

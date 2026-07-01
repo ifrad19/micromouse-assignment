@@ -1,0 +1,28 @@
+{
+  "planner": "rrt_grid_smooth",
+  "n_waypoints": 31,
+  "path_length": Infinity,
+  "plan_time_s": 0.055673837661743164,
+  "n_turns": 13,
+  "total_turn_deg": 548.3889458645174,
+  "success": true,
+  "n_edges": 30,
+  "trajectory_distance": 11.888840427829145,
+  "feasible": false,
+  "raw_waypoints": 30,
+  "path_length_cells": 11.888840427829145,
+  "maze": "spiral",
+  "maze_summary": {
+    "name": "spiral",
+    "rows": 16,
+    "cols": 16,
+    "start_rc": [
+      1,
+      1
+    ],
+    "goal_rc": [
+      10,
+      1
+    ]
+  }
+}

@@ -1,0 +1,97 @@
+astar:
+  debug: false
+  heuristic_weight: 1.0
+  turn_cost_enabled: false
+  turn_cost_threshold: 0
+  turn_cost_weight: 4.0
+  visualize_every: 50
+diff_drive:
+  base_slip_factor: 0.995
+  coefficient_friction: 0.95
+  combined_slip_factor: 0.001
+  gravity: 9.81
+  lateral_accel_threshold: 0.95
+  max_acceleration: 300.0
+  max_slip: 0.01
+  max_wheel_speed: 100.0
+  recovery_threshold: 0.95
+  robot_mass: 0.15
+  spinout_angular_boost: 1.0
+  spinout_linear_reduction: 0.75
+  spinout_noise: 0.001
+  spinout_threshold: 0.97
+  turn_rate_slip_factor: 0.001
+  use_lateral_accel_model: true
+  velocity_noise: 0.005
+  velocity_slip_factor: 0.001
+  wheel_radius: 0.02
+  wheelbase: 0.06
+maze_file: mazefiles/classic/alljapan-045-2024-exp-fin.txt
+maze_upsampling:
+  auto_scale_speeds: true
+  enabled: false
+  factor: 2
+micromouse:
+  debug: true
+  dt: 0.01667
+  goal_threshold: 1.0
+  initial_heading: 3.14257
+  min_speed_threshold: 0.001
+  visualize_every: 5
+path_planner: astar
+path_tracker: pure_pursuit
+physical_dimensions:
+  maze_height_meters: 2.88
+  maze_width_meters: 2.88
+  use_metric_speeds: true
+pure_pursuit:
+  debug: true
+  lookahead_distance: 3.0
+  max_speed: 0.1
+  min_speed: 0.001
+  slow_steering_threshold: 1.0
+  steering_gain: 1.0
+  visualize_every: 5
+rrt:
+  debug: true
+  goal_bias: 0.1
+  goal_tolerance: 1.0
+  max_iter: 1000
+  step_size: 0.5
+simulation:
+  fps: 60
+  window_size: 900
+stanley:
+  curvature_slowdown: true
+  goal_slowdown_dist: 1.5
+  goal_threshold: 0.5
+  k: 0.6
+  k_soft: 0.5
+  max_speed: 0.1
+  max_steer: 1.0472
+  min_speed: 0.001
+  steer_slow_threshold: 0.5
+  steer_stop_threshold: 1.2
+  wheel_base: 0.08
+theta_star:
+  debug: true
+  resolution: 1.0
+  robot_radius: 0.3
+  show_animation: false
+visualization:
+  cmap_colors:
+  - white
+  - black
+  - green
+  - red
+  - blue
+  figure_size:
+  - 12
+  - 12
+  title: Micromouse Simulation - Auto-Scaled Speeds
+wall_cost:
+  decay: exponential
+  decay_rate: 0.5
+  enabled: true
+  threshold: 5.0
+  weight: 8.0

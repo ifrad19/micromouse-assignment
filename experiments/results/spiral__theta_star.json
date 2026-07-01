@@ -1,0 +1,24 @@
+{
+  "planner": "theta_star",
+  "n_waypoints": 8,
+  "path_length": 37.58850563521467,
+  "plan_time_s": 0.0009500980377197266,
+  "n_turns": 6,
+  "total_turn_deg": 260.53767779197443,
+  "success": true,
+  "path_length_cells": 37.58850563521467,
+  "maze": "spiral",
+  "maze_summary": {
+    "name": "spiral",
+    "rows": 16,
+    "cols": 16,
+    "start_rc": [
+      1,
+      1
+    ],
+    "goal_rc": [
+      10,
+      1
+    ]
+  }
+}

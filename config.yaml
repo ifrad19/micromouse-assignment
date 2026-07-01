@@ -1,0 +1,216 @@
+# config.yaml - WITH AUTO-SCALING
+# =============================================================================
+# This config uses AUTO-SCALING to maintain constant physical speeds
+# regardless of upsampling factor!
+# =============================================================================
+
+# Maze file: .csv or .txt (format: 1=wall, 0=free, 2=start, 4=end)
+maze_file: "/tmp/bench/AAMC15Maze.csv"
+
+# =============================================================================
+# PATH PLANNER SELECTION
+# =============================================================================
+# Choose which path planning algorithm to use
+# Options: "astar", "theta_star", "rrt", "bb_rrt_star"
+path_planner: "rrt"
+
+# =============================================================================
+# PATH TRACKER SELECTION
+# =============================================================================
+# Choose which path tracking controller to use
+# Options: "pure_pursuit", "stanley"
+path_tracker: "stanley"
+
+# =============================================================================
+# PHYSICAL DIMENSIONS - For m/s speed conversion
+# =============================================================================
+physical_dimensions:
+  # Standard AAMC maze: 16x16 cells, each cell is 18cm (0.18m)
+  # Total maze size: 16 * 0.18 = 2.88m x 2.88m
+  maze_width_meters: 2.88       # Physical width of the maze in meters
+  maze_height_meters: 2.88      # Physical height of the maze in meters
+  use_metric_speeds: true       # If true, speeds in config are in m/s and converted to grid units
+
+simulation:
+  window_size: 900
+  fps: 60
+
+visualization:
+  figure_size: [12, 12]
+  cmap_colors: ['white', 'black', 'green', 'red', 'blue']
+  title: "Micromouse Simulation - Auto-Scaled Speeds"
+
+# =============================================================================
+# Wall cost parameters for A* pathfinding - always enabled, but can be tuned
+# =============================================================================
+
+wall_cost:
+  enabled: true # Set false to disable wall cost (not recommended for realistic paths)
+  weight: 8.0   # Higher weight = stronger avoidance of walls (but may lead to longer paths)
+  decay: "exponential"  # "linear" or "exponential"
+  decay_rate: 0.5  # For exponential decay, higher = faster decay of wall cost with distance
+  threshold: 5.0  # Maximum distance (in grid units) at which wall cost is applied
+
+# =============================================================================
+# A* PATHFINDING PARAMETERS - TRADITIONAL MICROMOUSE APPROACH
+# =============================================================================
+# Cost function: g(n) = distance + wall_avoidance + turn_count × turn_weight
+# 
+# This uses discrete cell-level planning matching real micromouse competitions:
+# - Operates on 16×16 maze grid (no upsampling needed)
+# - Turns are counted as discrete events at cell boundaries
+# - 90° turn = +turn_weight cost, 180° turn = +2×turn_weight cost
+# - Typical turn_weight: 0.5-2.0 cell distances
+# =============================================================================
+
+astar:
+  debug: false            # Set true to see A* visualization
+  visualize_every: 50
+  heuristic_weight: 1.0
+
+  # Turn cost - Traditional Micromouse approach
+  # Counts discrete direction changes at cell boundaries
+  turn_cost_enabled: false     # Set true to enable turn cost penalty
+  turn_cost_weight: 4.0      # Cost per 90-degree turn
+                              # Higher = stronger preference for straight paths
+                              # Typical values: 0.5-2.0 (in units of cell distance)
+  turn_cost_threshold: 0      # Not used in discrete turn counting
+
+# =============================================================================
+# THETA* PATH PLANNING PARAMETERS
+# =============================================================================
+# Theta* produces any-angle paths that are 5-20% shorter than A*
+# See theta_star_integration.md for details
+
+theta_star:
+  resolution: 1.0              # Grid resolution (should match maze cell size)
+  robot_radius: 0.3            # Obstacle inflation radius for safety
+  debug: true                  # Enable debug output
+  show_animation: false        # Keep false to avoid conflicts with main viz
+
+# =============================================================================
+# RRT PATH PLANNING PARAMETERS
+# =============================================================================
+# Rapidly-exploring Random Tree - sampling-based planning
+
+rrt:
+  max_iter: 1000               # Maximum iterations
+  step_size: 0.5               # Extension step size
+  goal_bias: 0.1               # Probability of sampling goal (0.0-1.0)
+  goal_tolerance: 1.0          # Distance to goal considered success
+  debug: true                  # Enable debug output
+
+# =============================================================================
+# BANG-BANG RRT* PARAMETERS
+# =============================================================================
+# Time-optimal RRT* planner.  Set path_planner: "bb_rrt_star" to use.
+
+bb_rrt_star:
+  v_max: 4.0                   # max speed (grid units/s)
+  a_max: 8.0                   # max acceleration magnitude
+  max_iter: 30000              # RRT* iterations (higher = more likely to find path)
+  goal_bias: 0.4               # probability of sampling the goal
+  max_steer_dist: 5.0          # max edge length in cells
+  rewire_gamma: 3.0            # rewire radius coefficient
+  rewire_k: 40                 # max neighbours in X_near
+  seed: 42                     # RNG seed (reproducible)
+  goal_tolerance: 0.6          # cells
+  robot_radius: 0.5            # clearance from walls (cells) for line-of-sight checks
+
+# =============================================================================
+# MAZE UPSAMPLING (Optional - not needed for traditional micromouse)
+# =============================================================================
+# Traditional micromouse uses cell-level planning on 16×16 grid (upsampling disabled).
+# Upsampling can be enabled for research purposes or alternative algorithms.
+# =============================================================================
+maze_upsampling:
+  enabled: false               # Keep false for traditional micromouse approach
+  factor: 2                    # Upsampling factor if enabled
+  auto_scale_speeds: true      # Auto-scale speeds if upsampling enabled
+
+# =============================================================================
+# Pure Pursuit parameters - speeds are in m/s if use_metric_speeds is true, otherwise in grid units/sec
+# fine tune these parameters to achieve smooth and efficient path following
+# =============================================================================
+
+pure_pursuit:
+  # When physical_dimensions.use_metric_speeds = true, speeds are in m/s
+  # Otherwise speeds are in grid units/sec
+  lookahead_distance: 3.0       # in grid units
+  max_speed: 0.1              # max allowed speed = 4 m/s 
+  min_speed: 0.001               # m/s
+  steering_gain: 1.0     # Gain for steering control (higher = more aggressive)
+  slow_steering_threshold: 1.0     # Degrees - start slowing down steering below this angle
+  debug: true                   # Enable to see path following
+  visualize_every: 5        # Visualize every N steps (set to 1 for continuous visualization)
+
+
+# =============================================================================
+# Stanley controller parameters
+# Thrun et al. (2006):  steer = theta_e + atan(k * cte / (v + k_soft))
+# All speeds in m/s when use_metric_speeds is true, otherwise grid units/s.
+# =============================================================================
+stanley:
+  k: 0.6                       # cross-track error gain (1/s)
+  k_soft: 0.5                  # softening constant to avoid divide-by-zero at low speed
+  max_steer: 1.0472            # maximum steering angle (rad), ~60°
+  wheel_base: 0.08             # wheel base of the robot in meters (informational; the
+                               # simulation uses an effective L_equiv of 1 grid cell)
+  max_speed: 0.1               # max commanded speed (m/s if use_metric_speeds, else grid/s)
+  min_speed: 0.001             # min commanded speed
+  goal_slowdown_dist: 1.5      # start slowing down within this many grid cells of goal
+  goal_threshold: 0.5          # commanded speed is 0 within this distance of goal
+  curvature_slowdown: true     # slow down in sharp turns
+  steer_slow_threshold: 0.5    # rad; start slowing below this steering magnitude
+  steer_stop_threshold: 1.2    # rad; command min_speed above this steering magnitude
+
+
+# =============================================================================
+# Configure the micromouse orientation, timestep, and goal threshold - don't modify
+# 
+# =============================================================================
+
+micromouse:
+  initial_heading: 0.0           # 0 = facing down (+row, into the corridor)
+  dt: 0.01667                   # timestep in seconds (1/60 for real-time at 60 FPS)
+  goal_threshold: 1.0           # in grid units
+  min_speed_threshold: 0.001    # m/s (when use_metric_speeds: true)
+  debug: true                   # Enable debug visualization
+  visualize_every: 5
+
+# =============================================================================
+# DIFFERENTIAL DRIVE WITH SPIN-OUT PHYSICS
+# =============================================================================
+diff_drive:
+  # Physical dimensions
+  wheel_radius: 0.02 # don't modify
+  wheelbase: 0.06 # don't modify
+  
+  # Motor constraints (base values, will be scaled)
+  max_wheel_speed: 100.0         #  limit: 200 rad/s 
+  max_acceleration: 300.0        # limit: 400 rad/s²
+  
+  # ==========================================================================
+  # SPIN-OUT PARAMETERS - don't modify
+  # ==========================================================================
+  base_slip_factor: 0.995       # Excellent base grip
+  velocity_slip_factor: 0.001    # Minimal velocity-induced slip
+  turn_rate_slip_factor: 0.001   # Minimal turn-induced slip
+  combined_slip_factor: 0.001    # Key parameter - much more forgiving
+  max_slip: 0.01                # Low maximum slip
+  
+  spinout_threshold: 0.97       # Much harder to trigger spinout
+  spinout_angular_boost: 1.0    # Mild angular boost
+  spinout_linear_reduction: 0.75 # Retain substantial linear velocity
+  recovery_threshold: 0.95      # Easy recovery
+  spinout_noise: 0.001           # Minimal chaotic behavior
+  
+  # ==========================================================================
+  # PHYSICS MODEL - don't modify
+  # ==========================================================================
+  use_lateral_accel_model: true
+  robot_mass: 0.15
+  coefficient_friction: 0.95    # High traction surface
+  gravity: 9.81
+  lateral_accel_threshold: 0.95 # Very high threshold
+  velocity_noise: 0.005         # Minimal noise

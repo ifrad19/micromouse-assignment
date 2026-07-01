@@ -1,0 +1,25 @@
+{
+  "planner": "rrt_smooth",
+  "n_waypoints": 15,
+  "path_length": 10.221977474425872,
+  "plan_time_s": 0.0025839805603027344,
+  "n_turns": 2,
+  "total_turn_deg": 127.30671313355455,
+  "success": true,
+  "raw_waypoints": 25,
+  "path_length_cells": 10.221977474425872,
+  "maze": "small_maze",
+  "maze_summary": {
+    "name": "small_maze",
+    "rows": 11,
+    "cols": 11,
+    "start_rc": [
+      1,
+      1
+    ],
+    "goal_rc": [
+      8,
+      6
+    ]
+  }
+}

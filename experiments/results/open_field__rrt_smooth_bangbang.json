@@ -1,0 +1,27 @@
+{
+  "planner": "rrt_smooth_bangbang",
+  "n_waypoints": 6,
+  "path_length": Infinity,
+  "plan_time_s": 0.004387855529785156,
+  "n_turns": 1,
+  "total_turn_deg": 64.20119916689197,
+  "success": true,
+  "n_edges": 5,
+  "trajectory_distance": 18.739702341486883,
+  "feasible": false,
+  "path_length_cells": Infinity,
+  "maze": "open_field",
+  "maze_summary": {
+    "name": "open_field",
+    "rows": 16,
+    "cols": 16,
+    "start_rc": [
+      1,
+      1
+    ],
+    "goal_rc": [
+      14,
+      14
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "planner": "rrt",
+  "n_waypoints": 30,
+  "path_length": 14.482925501304841,
+  "plan_time_s": 0.05500912666320801,
+  "n_turns": 19,
+  "total_turn_deg": 895.5200552612453,
+  "success": true,
+  "path_length_cells": 14.482925501304841,
+  "maze": "spiral",
+  "maze_summary": {
+    "name": "spiral",
+    "rows": 16,
+    "cols": 16,
+    "start_rc": [
+      1,
+      1
+    ],
+    "goal_rc": [
+      10,
+      1
+    ]
+  }
+}

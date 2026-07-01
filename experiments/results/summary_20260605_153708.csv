@@ -1,0 +1,2 @@
+maze,planner,feasible,n_edges,n_turns,n_waypoints,path_length,path_length_cells,plan_time_s,success,total_turn_deg,trajectory_distance
+open_field,rrt_smooth_bangbang,False,4,3,5,inf,inf,0.0037469863891601562,True,88.6474430360199,18.950913751515635

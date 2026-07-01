@@ -1,0 +1,26 @@
+{
+  "planner": "bangbang_rrt",
+  "n_waypoints": 59,
+  "path_length": 12.955809678773479,
+  "plan_time_s": 2.087459087371826,
+  "n_turns": 44,
+  "total_turn_deg": 1770.1504956582553,
+  "success": true,
+  "n_edges": 58,
+  "tree_size": 962,
+  "path_length_cells": 41.94131489987627,
+  "maze": "spiral",
+  "maze_summary": {
+    "name": "spiral",
+    "rows": 16,
+    "cols": 16,
+    "start_rc": [
+      1,
+      1
+    ],
+    "goal_rc": [
+      10,
+      1
+    ]
+  }
+}

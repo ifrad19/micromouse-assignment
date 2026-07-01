@@ -1,0 +1,28 @@
+{
+  "planner": "rrt_smooth_bangbang_circles",
+  "n_waypoints": 5,
+  "path_length": 5.352657559196743,
+  "plan_time_s": 0.006036996841430664,
+  "n_turns": 2,
+  "total_turn_deg": 77.63960388089583,
+  "success": true,
+  "n_edges": 4,
+  "trajectory_distance": 20.126397582566135,
+  "feasible": true,
+  "raw_waypoints": 8,
+  "path_length_cells": 20.126397582566135,
+  "maze": "corridor",
+  "maze_summary": {
+    "name": "corridor",
+    "rows": 16,
+    "cols": 16,
+    "start_rc": [
+      1,
+      1
+    ],
+    "goal_rc": [
+      14,
+      14
+    ]
+  }
+}

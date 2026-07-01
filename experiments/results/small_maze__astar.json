@@ -1,0 +1,24 @@
+{
+  "planner": "astar",
+  "n_waypoints": 13,
+  "path_length": 12.0,
+  "plan_time_s": 5.412101745605469e-05,
+  "n_turns": 2,
+  "total_turn_deg": 180.0,
+  "success": true,
+  "path_length_cells": 12.0,
+  "maze": "small_maze",
+  "maze_summary": {
+    "name": "small_maze",
+    "rows": 11,
+    "cols": 11,
+    "start_rc": [
+      1,
+      1
+    ],
+    "goal_rc": [
+      8,
+      6
+    ]
+  }
+}

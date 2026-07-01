@@ -1,0 +1,24 @@
+{
+  "planner": "theta_star",
+  "n_waypoints": 6,
+  "path_length": 21.240912633735487,
+  "plan_time_s": 0.0007140636444091797,
+  "n_turns": 4,
+  "total_turn_deg": 184.1849161251184,
+  "success": true,
+  "path_length_cells": 21.240912633735487,
+  "maze": "narrow",
+  "maze_summary": {
+    "name": "narrow",
+    "rows": 16,
+    "cols": 16,
+    "start_rc": [
+      1,
+      1
+    ],
+    "goal_rc": [
+      13,
+      14
+    ]
+  }
+}

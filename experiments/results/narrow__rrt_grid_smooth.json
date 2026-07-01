@@ -1,0 +1,28 @@
+{
+  "planner": "rrt_grid_smooth",
+  "n_waypoints": 32,
+  "path_length": Infinity,
+  "plan_time_s": 0.01379084587097168,
+  "n_turns": 9,
+  "total_turn_deg": 394.5659348408278,
+  "success": true,
+  "n_edges": 31,
+  "trajectory_distance": 21.200227732934525,
+  "feasible": false,
+  "raw_waypoints": 51,
+  "path_length_cells": 21.200227732934525,
+  "maze": "narrow",
+  "maze_summary": {
+    "name": "narrow",
+    "rows": 16,
+    "cols": 16,
+    "start_rc": [
+      1,
+      1
+    ],
+    "goal_rc": [
+      13,
+      14
+    ]
+  }
+}

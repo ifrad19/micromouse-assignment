@@ -1,0 +1,6 @@
+maze,planner,n_edges,n_turns,n_waypoints,path_length,plan_time_s,raw_waypoints,success,total_turn_deg,trajectory_distance,tree_size
+small_maze,astar,,3,13,12.0,6.580352783203125e-05,,True,270.0,,
+small_maze,theta_star,,4,6,10.242640687119286,0.00018715858459472656,,True,180.00000000000003,,
+small_maze,rrt,,18,30,14.505212747901972,0.010059118270874023,,True,862.52926130319,,
+small_maze,rrt_smooth,,16,26,17.38471223042024,0.009478092193603516,41,True,803.4363596902508,,
+small_maze,bangbang_rrt,13,8,14,4.775496465617472,0.21606707572937012,,True,389.26533252875817,11.095711899089508,229

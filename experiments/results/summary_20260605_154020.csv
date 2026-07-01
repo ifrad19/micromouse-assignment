@@ -1,0 +1,21 @@
+maze,planner,failure,feasible,n_edges,n_turns,n_waypoints,path_length,path_length_cells,plan_time_s,raw_waypoints,success,total_turn_deg,trajectory_distance,tree_size
+open_field,rrt_smooth,,,,0,10,18.739702341486883,18.739702341486883,0.004004001617431641,44,True,21.430924892311836,,
+open_field,rrt_grid_smooth,NameError: name 'make_grid_collision_fn' is not defined,,,0,0,inf,,0.0,,False,0.0,,
+open_field,rrt_smooth_bangbang_circles,,False,5,1,6,inf,inf,0.004370927810668945,10,True,64.20119916689197,18.739702341486883,
+open_field,bangbang_rrt,,,31,25,32,6.534424553147849,20.42469869389209,5.726541757583618,,True,1141.4827376498938,,2398
+corridor,rrt_smooth,,,,0,8,20.126397582566135,20.126397582566135,0.005861997604370117,48,True,8.009974544136726,,
+corridor,rrt_grid_smooth,NameError: name 'make_grid_collision_fn' is not defined,,,0,0,inf,,0.0,,False,0.0,,
+corridor,rrt_smooth_bangbang_circles,,True,4,2,5,5.352657559196743,5.352657559196743,0.0061876773834228516,8,True,77.63960388089583,20.126397582566135,
+corridor,bangbang_rrt,,,30,22,31,6.933424274453901,21.250757897620893,5.60725212097168,,True,901.1890206138555,,2269
+spiral,rrt_smooth,,,,7,26,11.21497019690008,11.21497019690008,0.05556821823120117,30,True,292.38086665172034,,
+spiral,rrt_grid_smooth,NameError: name 'make_grid_collision_fn' is not defined,,,0,0,inf,,0.0,,False,0.0,,
+spiral,rrt_smooth_bangbang_circles,,False,21,7,22,inf,inf,0.0568699836730957,26,True,278.5682663466011,11.214970089946114,
+spiral,bangbang_rrt,,,58,44,59,12.955809678773479,41.94131489987627,2.1360650062561035,,True,1770.1504956582553,,962
+narrow,rrt_smooth,,,,4,16,21.465305449429238,21.465305449429238,0.013150215148925781,51,True,222.21040337478775,,
+narrow,rrt_grid_smooth,NameError: name 'make_grid_collision_fn' is not defined,,,0,0,inf,,0.0,,False,0.0,,
+narrow,rrt_smooth_bangbang_circles,,False,11,5,12,inf,inf,0.013632774353027344,16,True,247.14659004864768,21.46513428168604,
+narrow,bangbang_rrt,,,32,22,33,7.520136117323304,23.959401325525512,3.826808214187622,,True,1175.1132463985523,,1684
+small_maze,rrt_smooth,,,,2,15,10.221977474425872,10.221977474425872,0.002611875534057617,25,True,127.30671313355455,,
+small_maze,rrt_grid_smooth,NameError: name 'make_grid_collision_fn' is not defined,,,0,0,inf,,0.0,,False,0.0,,
+small_maze,rrt_smooth_bangbang_circles,,False,8,3,9,inf,inf,0.0031080245971679688,15,True,193.79160308644606,10.221967771146483,
+small_maze,bangbang_rrt,,,16,10,17,3.6529597040765474,10.45555274481148,3.0765111446380615,,True,514.7598142640297,,1330
