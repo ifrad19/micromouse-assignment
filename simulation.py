@@ -49,8 +49,6 @@ def _make_controller(config):
         cfg["pure_pursuit"] = {**cfg.get("pure_pursuit", {}), "debug": False}
         return PurePursuit(None, cfg)
     raise ValueError(f"Unknown path_tracker: {tracker!r}")
-
-
 # ── Colour palette ────────────────────────────────────────────────────────── #
 
 C_BG          = (20, 20, 30)
@@ -105,7 +103,6 @@ class PygameSimulation:
                 print(f"Auto-switched maze to: {source_maze}")
             else:
                 print(f"WARNING: Source maze '{source_maze}' not found, using config maze")
-
         # ── maze (keep raw array for resets) ──
         maze_file = self.config.get("maze_file", "maze.csv")
         self.maze_array = load_maze(maze_file)
@@ -122,7 +119,6 @@ class PygameSimulation:
 
         # ── Save metric mpc for robot body rendering (overridden by BB-RRT*) ──
         self.render_mpc = self.meters_per_cell
-
         # ── window geometry ──
         sim_cfg = self.config.get("simulation", {})
         self.window_size = sim_cfg.get("window_size", 900)
@@ -208,7 +204,6 @@ class PygameSimulation:
                 st['max_speed'] = st['max_speed'] / self.meters_per_cell
             if 'min_speed' in st:
                 st['min_speed'] = st['min_speed'] / self.meters_per_cell
-
         # Convert Micromouse speed threshold
         if 'micromouse' in self.config:
             mm = self.config['micromouse']
@@ -440,7 +435,6 @@ class PygameSimulation:
 
         # Build bang-bang open-loop edge plans if available
         self.bb_edge_plans = None
-
         if not self.path:
             self.status = "NO PATH FOUND"
             self.paused = True

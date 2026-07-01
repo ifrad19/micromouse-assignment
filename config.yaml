@@ -101,6 +101,7 @@ rrt:
   debug: true                  # Enable debug output
 
 # =============================================================================
+# =============================================================================
 # BANG-BANG RRT* PARAMETERS
 # =============================================================================
 # Time-optimal RRT* planner.  Set path_planner: "bb_rrt_star" to use.
@@ -116,8 +117,6 @@ bb_rrt_star:
   seed: 42                     # RNG seed (reproducible)
   goal_tolerance: 0.6          # cells
   robot_radius: 0.5            # clearance from walls (cells) for line-of-sight checks
-
-# =============================================================================
 # MAZE UPSAMPLING (Optional - not needed for traditional micromouse)
 # =============================================================================
 # Traditional micromouse uses cell-level planning on 16×16 grid (upsampling disabled).
@@ -163,9 +162,6 @@ stanley:
   curvature_slowdown: true     # slow down in sharp turns
   steer_slow_threshold: 0.5    # rad; start slowing below this steering magnitude
   steer_stop_threshold: 1.2    # rad; command min_speed above this steering magnitude
-
-
-# =============================================================================
 # Configure the micromouse orientation, timestep, and goal threshold - don't modify
 # 
 # =============================================================================
