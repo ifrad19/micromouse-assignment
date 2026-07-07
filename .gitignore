@@ -1,7 +1,29 @@
+# Virtual environments (all common names)
 venv/
+.venv/
+env/
+.env/
+ENV/
+
+# Python cache and compiled files
 __pycache__/
 *.pyc
-.DS_Store
+*.pyo
+*.pyd
 *.egg-info/
 .pytest_cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+
+# Project-specific
 REPORT.md
+
+# Jupyter
+.ipynb_checkpoints/
