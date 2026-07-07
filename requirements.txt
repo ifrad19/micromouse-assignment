@@ -37,7 +37,7 @@ pillow==12.2.0
 premailer==3.10.0
 psycopg2-binary==2.9.12
 pycryptodome==3.23.0
-pygame==2.6.1
+pygame-ce
 PyJWT==2.12.1
 pyparsing==3.3.2
 python-dateutil==2.9.0.post0
@@ -55,3 +55,5 @@ typing_extensions==4.15.0
 urllib3==2.6.3
 Werkzeug==3.1.6
 yagmail==0.15.293
+# dubins (C extension) — pure-Python fallback implemented in dubins_bangbang_steering.py
+# because the C extension fails to compile on Python 3.13+ (missing longintrepr.h).
