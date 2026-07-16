@@ -36,16 +36,18 @@ PLANNER_ORDER = [
     "rrt_grid_smooth_strategic",
     "rrt_smooth_bangbang_circles",
     "bb_rrt_star",
+    "bb-rrt-star_theta",
 ]
 PLANNER_LABEL = {
     "astar": "A*",
     "theta_star": "Theta*",
     "rrt": "RRT",
     "rrt_smooth": "RRT+smooth",
-    "rrt_grid_smooth": "RRT+grid-smooth",
+    "rrt_grid_smooth": "RRT-Smooth",
     "rrt_grid_smooth_strategic": "RRT+strategic",
     "rrt_smooth_bangbang_circles": "RRT+smooth+BB",
     "bb_rrt_star": "BB-RRT*",
+    "bb-rrt-star_theta": "BB-RRT*Theta",
 }
 PLANNER_COLOR = {
     "astar": "#888888",

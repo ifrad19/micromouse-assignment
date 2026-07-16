@@ -1,7 +1,7 @@
 """
 Head-to-head planner comparison on a single maze.
 
-Runs A*, Theta*, RRT, BB-RRT, and BB-RRT* on the same maze under identical
+Runs A*, Theta*, RRT, RRT-Smooth, and BB-RRT* on the same maze under identical
 conditions. Reports planning time, path length, number of waypoints/turns,
 and theoretical minimum traversal time (bang-bang speed profile per segment).
 
@@ -27,21 +27,22 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from micromouse import load_maze, Map
 from experiments.planner_wrappers import (
     PLANNERS, run_one, path_length_xy, count_turns,
-    center_path_away_from_walls,
+    center_path_away_from_walls, validate_planned_path_cspace,
 )
 from bangbang_rrt_star import smooth_path_with_bang_bang, make_grid_collision_fn, bang_bang_steer_1d
 
 
 # --- Planners to compare ---
 
-TARGET_PLANNERS = ['astar', 'theta_star', 'rrt', 'rrt_grid_smooth', 'bb_rrt_star']
+TARGET_PLANNERS = ['astar', 'theta_star', 'rrt', 'rrt_grid_smooth', 'bb_rrt_star', 'bb_rrt_star_theta']
 
 NICE_NAMES = {
     'astar':           'A*',
     'theta_star':      'Theta*',
     'rrt':             'RRT',
-    'rrt_grid_smooth': 'BB-RRT',
+    'rrt_grid_smooth': 'RRT-Smooth',
     'bb_rrt_star':     'BB-RRT*',
+    'bb_rrt_star_theta': 'BB-RRT*_Theta',
 }
 
 
@@ -201,6 +202,7 @@ def main():
 
     grid = maze.get_grid_representation()
     grid_walls = (grid == 1).astype(int)
+    robot_radius = config.get('bb_rrt_star', {}).get('robot_radius', 0.28)
 
     print(f"{'='*70}")
     print(f"HEAD-TO-HEAD PLANNER COMPARISON")
@@ -251,11 +253,15 @@ def main():
 
         theo_time, feasible = compute_theoretical_time(waypoints_xy, maze, config)
 
+        cspace_result = validate_planned_path_cspace(
+            waypoints_xy, grid_walls, robot_radius)
+
         path_len = row['path_length_cells']
         print(f"OK  path_len={path_len:.2f}  "
               f"plan_time={row['plan_time_s']:.3f}s  "
               f"wps={row['n_waypoints']}  turns={row['n_turns']}  "
-              f"theo_time={theo_time:.3f}s  feasible={feasible}")
+              f"theo_time={theo_time:.3f}s  feasible={feasible}  "
+              f"planned_coll={cspace_result['n_collisions']}")
 
         waypoints_centered = center_path_away_from_walls(waypoints_xy, grid_walls)
         json_path = save_path_json(
@@ -272,17 +278,19 @@ def main():
             'theo_time': theo_time,
             'feasible': feasible,
             'json_path': json_path,
+            'planned_collisions': cspace_result['n_collisions'],
+            'planned_free': cspace_result['collision_free'],
         })
 
     successful = [r for r in results if r['success']]
     failed = [r for r in results if not r['success']]
 
-    print(f"\n{'='*90}")
+    print(f"\n{'='*110}")
     print("RESULTS SUMMARY")
-    print(f"{'='*90}")
+    print(f"{'='*110}")
     print(f"{'Planner':<12} {'Path Len':>10} {'Plan Time':>11} {'Waypoints':>10} "
-          f"{'Turns':>7} {'Theo Time':>11} {'Feasible':>9}")
-    print("-" * 90)
+          f"{'Turns':>7} {'Theo Time':>11} {'Collisions':>11} {'Free':>6} {'Feasible':>9}")
+    print("-" * 110)
 
     for r in sorted(successful, key=lambda x: x['theo_time']):
         print(f"{NICE_NAMES[r['planner']]:<12} "
@@ -291,6 +299,8 @@ def main():
               f"{r['n_waypoints']:10d} "
               f"{r['n_turns']:7d} "
               f"{r['theo_time']:11.3f} "
+              f"{r.get('planned_collisions', 0):11d} "
+              f"{'yes' if r.get('planned_free', True) else 'NO':>6} "
               f"{'yes' if r['feasible'] else 'NO':>9}")
 
     for r in failed:

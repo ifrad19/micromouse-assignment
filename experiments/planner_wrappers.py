@@ -122,19 +122,59 @@ def validate_path(waypoints_xy, maze, sample_step=0.05):
     return validated
 
 
-def center_path_away_from_walls(waypoints_xy, grid, clearance=0.3, max_shift=0.5):
-    """Shift each waypoint away from nearby walls toward the corridor center.
+def validate_planned_path_cspace(waypoints, grid_walls, robot_radius,
+                                  sample_step=0.05):
+    """Check a planner's waypoint path against C-space obstacles.
+
+    Densely samples straight segments between consecutive waypoints and
+    tests each sample against the precomputed Minkowski-inflated map.
+
+    Args:
+        waypoints: list of (x, y) = (col, row) waypoints.
+        grid_walls: 2D int array, 1 = wall, 0 = free.
+        robot_radius: robot radius in cell units.
+        sample_step: distance between collision samples.
+
+    Returns dict with keys: n_samples, n_collisions, collision_free, first_xy.
+    """
+    from bangbang_rrt_star import make_continuous_cspace_collision_fn
+    import numpy as np
+
+    coll = make_continuous_cspace_collision_fn(grid_walls, robot_radius)
+
+    wp = list(waypoints)
+    n_coll = 0
+    n_samp = 0
+    first = None
+    for i in range(len(wp) - 1):
+        x0, y0 = wp[i][0], wp[i][1]
+        x1, y1 = wp[i + 1][0], wp[i + 1][1]
+        steps = max(1, int(np.hypot(x1 - x0, y1 - y0) / sample_step))
+        for s in range(steps + 1):
+            t = s / steps
+            x = x0 + t * (x1 - x0)
+            y = y0 + t * (y1 - y0)
+            n_samp += 1
+            if coll(x, y):
+                n_coll += 1
+                if first is None:
+                    first = (x, y)
+    return {'n_samples': n_samp, 'n_collisions': n_coll,
+            'collision_free': n_coll == 0, 'first_xy': first}
+
+
+def center_path_away_from_walls(waypoints_xy, grid, clearance=3.0, max_shift=1.0):
+    """Shift each waypoint toward the corridor center between walls.
 
     For each waypoint, scans 4 cardinal directions to find the nearest wall
-    boundary. If the waypoint is closer to a wall than ``clearance``, it is
-    pushed toward the corridor midpoint. This prevents controller drift into
-    walls in narrow 1-cell corridors.
+    boundaries. Computes the corridor midpoint and shifts the waypoint toward
+    it, capped at ``max_shift`` cells per axis.
 
     Args:
         waypoints_xy: list of (col, row) waypoints
         grid: numpy array, grid[row][col] == 1 means wall
-        clearance: minimum desired distance from wall center (cells)
-        max_shift: maximum shift per waypoint (cells)
+        clearance: only shift waypoints closer than this to a wall (cells)
+        max_shift: maximum shift per waypoint per axis (cells)
 
     Returns:
         list of adjusted (col, row) waypoints (new list, originals untouched)
@@ -197,10 +237,13 @@ def center_path_away_from_walls(waypoints_xy, grid, clearance=0.3, max_shift=0.5
             else:
                 new_col -= shift
 
-        new_row = max(0.1, min(new_row, n_rows - 1.1))
-        new_col = max(0.1, min(new_col, n_cols - 1.1))
+        nr = max(0.1, min(new_row, n_rows - 1.1))
+        nc = max(0.1, min(new_col, n_cols - 1.1))
 
-        centered.append((new_col, new_row))
+        if grid[int(nr), int(nc)] == 1:
+            centered.append((col, row))
+        else:
+            centered.append((nc, nr))
 
     centered[0] = waypoints_xy[0]
     centered[-1] = waypoints_xy[-1]
@@ -376,7 +419,7 @@ def _grid_path_smoothing(waypoints, grid_walls, n_iters=500, sample_step=0.05):
 
 def plan_bb_rrt_star(maze, start_xy, goal_xy, config):
     """Wraps BangBangRRTStar from bangbang_rrt_star.py."""
-    from bangbang_rrt_star import BangBangRRTStar, make_grid_collision_fn
+    from bangbang_rrt_star import BangBangRRTStar, make_continuous_cspace_collision_fn
 
     bb_cfg = config.get('bb_rrt_star', {})
     grid = maze.get_grid_representation()
@@ -385,7 +428,8 @@ def plan_bb_rrt_star(maze, start_xy, goal_xy, config):
 
     sx, sy = start_xy
     gx, gy = goal_xy
-    collision_fn = make_grid_collision_fn(grid_walls, robot_radius=bb_cfg.get('robot_radius', 0.0))
+    robot_radius = bb_cfg.get('robot_radius', 0.28)
+    collision_fn = make_continuous_cspace_collision_fn(grid_walls, robot_radius)
 
     goal_tol = bb_cfg.get('goal_tolerance', 0.6)
     goal_fn = lambda x, y: (abs(x - gx) <= goal_tol and abs(y - gy) <= goal_tol)
@@ -418,6 +462,7 @@ def plan_bb_rrt_star(maze, start_xy, goal_xy, config):
         return {'waypoints': [], 'plan_time_s': elapsed, 'cost': float('inf'),
                 'extra': {'failure': 'no_path', 'path_length_cells': float('inf')}}
     waypoints = [(w[0], w[1]) for w in result['waypoints']]
+    waypoints = center_path_away_from_walls(waypoints, grid_walls)
     L = path_length_xy(waypoints)
     return {
         'waypoints': waypoints,
@@ -429,6 +474,79 @@ def plan_bb_rrt_star(maze, start_xy, goal_xy, config):
             'n_edges': len(result['edges']),
             'tree_size': len(result.get('nodes', [])),
             'path_length_cells': L,
+        },
+    }
+
+
+# --- Bang-Bang RRT* (Dubins + heading-aware) ---
+
+
+def plan_bb_rrt_star_theta(maze, start_xy, goal_xy, config):
+    """Wraps BangBangRRTStarTheta from bangbang_rrt_star.py."""
+    from bangbang_rrt_star import (BangBangRRTStarTheta,
+                                    make_continuous_cspace_collision_fn)
+    from dubins_bangbang_steering import compute_turning_radius_cells
+
+    bb_cfg = config.get('bb_rrt_star', {})
+    grid = maze.get_grid_representation()
+    grid_walls = (grid == 1).astype(int)
+    n_rows, n_cols = grid.shape
+
+    sx, sy = start_xy
+    gx, gy = goal_xy
+    robot_radius = bb_cfg.get('robot_radius', 0.28)
+    collision_fn = make_continuous_cspace_collision_fn(grid_walls, robot_radius)
+
+    goal_tol = bb_cfg.get('goal_tolerance', 0.6)
+    goal_fn = lambda x, y: (abs(x - gx) <= goal_tol and abs(y - gy) <= goal_tol)
+
+    turning_radius = compute_turning_radius_cells(config, n_cols)
+
+    planner = BangBangRRTStarTheta(
+        x_min=0.0, x_max=float(n_cols),
+        y_min=0.0, y_max=float(n_rows),
+        v_max=bb_cfg.get('v_max', 4.0),
+        a_max=bb_cfg.get('a_max', 8.0),
+        turning_radius=turning_radius,
+        collision_fn=collision_fn, goal_fn=goal_fn,
+        max_iter=bb_cfg.get('max_iter', 3000),
+        goal_bias=bb_cfg.get('goal_bias', 0.2),
+        max_steer_dist=bb_cfg.get('max_steer_dist', 1.0),
+        rewire_gamma=bb_cfg.get('rewire_gamma', 2.0),
+        rewire_k=bb_cfg.get('rewire_k', 20),
+        seed=bb_cfg.get('seed', 42),
+        verbose=False,
+        grid=grid_walls,
+    )
+    t0 = time.time()
+    result = planner.plan(
+        start_xy=(sx, sy), goal_xy=(gx, gy),
+        start_v=bb_cfg.get('start_v', 0.0),
+        goal_tolerance=goal_tol,
+        goal_v=bb_cfg.get('goal_v', 0.0),
+        time_budget_s=bb_cfg.get('time_budget_s', None),
+    )
+    elapsed = time.time() - t0
+    if result is None:
+        return {'waypoints': [], 'plan_time_s': elapsed, 'cost': float('inf'),
+                'extra': {'failure': 'no_path', 'path_length_cells': float('inf'),
+                          'robot_radius': robot_radius}}
+    waypoints = [(w[0], w[1]) for w in result['waypoints']]
+    waypoints = center_path_away_from_walls(waypoints, grid_walls)
+    L = path_length_xy(waypoints)
+    return {
+        'waypoints': waypoints,
+        'plan_time_s': elapsed,
+        'cost': result['best_cost'],
+        'controls': result['controls'],
+        'edges': result['edges'],
+        'trajectory': result['trajectory'],
+        'extra': {
+            'n_edges': len(result['edges']),
+            'tree_size': len(result.get('nodes', [])),
+            'path_length_cells': L,
+            'has_trajectory': result['trajectory'].shape[0] > 0,
+            'robot_radius': robot_radius,
         },
     }
 
@@ -612,6 +730,7 @@ PLANNERS = {
     'rrt_grid_smooth_strategic': plan_rrt_grid_smooth_strategic,
     'rrt_smooth_bangbang_circles': plan_rrt_smooth_bangbang_circles,
     'bb_rrt_star':              plan_bb_rrt_star,
+    'bb_rrt_star_theta':        plan_bb_rrt_star_theta,
 }
 
 

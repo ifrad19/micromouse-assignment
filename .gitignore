@@ -24,6 +24,7 @@ Thumbs.db
 
 # Project-specific
 REPORT.md
+report/
 
 # Jupyter
 .ipynb_checkpoints/

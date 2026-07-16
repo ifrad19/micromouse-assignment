@@ -165,7 +165,15 @@ class PygameSimulation:
         self.robot = DifferentialDriveRobot(self.config)
         self.controller = DiffDriveController(self.robot.wheel_radius, self.robot.wheelbase)
         self.bb_plan_result = None
-        
+
+        # ── Rectangular collision check (matches drawn body exactly) ──
+        from bangbang_rrt_star import make_rect_collision_fn
+        _grid_walls = (np.asarray(self.maze.get_grid_representation()) == 1).astype(int)
+        _half_w = (self.robot.wheelbase / self.render_mpc) / 2.0
+        _half_l = _half_w * 1.1
+        self._rect_collision_fn = make_rect_collision_fn(
+            _grid_walls, _half_l, _half_w)
+
         self._reset_robot()
 
     def _convert_metric_speeds(self):
@@ -368,7 +376,15 @@ class PygameSimulation:
             
             # JSON stores waypoints_rc as [[row, col], ...]
             self.path = [(wp[0], wp[1]) for wp in data['waypoints_rc']]
-            
+
+            # Center waypoints away from walls for better clearance
+            grid = self.maze.get_grid_representation()
+            grid_walls = (grid == 1).astype(int)
+            from experiments.planner_wrappers import center_path_away_from_walls
+            col_row = [(wp[1], wp[0]) for wp in self.path]
+            col_row = center_path_away_from_walls(col_row, grid_walls)
+            self.path = [(wp[1], wp[0]) for wp in col_row]
+
             # Compute actual path length (JSON value may be infinite)
             self.planned_distance = data.get('path_length', 0.0)
             if math.isinf(self.planned_distance) or self.planned_distance == 0.0:
@@ -407,6 +423,17 @@ class PygameSimulation:
             # Save the metric value for rendering (robot body sizing)
             self.render_mpc = self.meters_per_cell
             self.meters_per_cell = 1.0
+        elif planner_key == "bb_rrt_star_theta" and not self.load_path_file:
+            from experiments.planner_wrappers import plan_bb_rrt_star_theta
+            start_xy = (self.maze.start[1], self.maze.start[0])
+            goal_xy  = (self.maze.goal[1], self.maze.goal[0])
+            result = plan_bb_rrt_star_theta(self.maze, start_xy, goal_xy, cfg)
+            self.bb_plan_result = result
+            self.path = [(w[1], w[0]) for w in result['waypoints']]
+            self.planned_distance = result.get('extra', {}).get(
+                'path_length_cells', result['cost'])
+            self.render_mpc = self.meters_per_cell
+            self.meters_per_cell = 1.0
         else:
             astar = AStar(self.maze, cfg)
             px, py = astar.plan_path(start, goal)
@@ -422,27 +449,40 @@ class PygameSimulation:
         sp = self.maze.start
         mc = self.config.get("micromouse", {})
 
-        self.pos       = list(sp)            # [row, col]
-        self.heading   = mc.get("initial_heading", math.pi / 4)
+        self.pos       = [sp[0] + 0.5, sp[1] + 0.5]  # cell center
+        # Face toward first waypoint (auto-adapts to any maze)
+        if len(self.path) > 1:
+            dr = self.path[1][0] - self.pos[0]
+            dc = self.path[1][1] - self.pos[1]
+            self.heading = math.atan2(dc, dr)
+        else:
+            self.heading = mc.get("initial_heading", math.pi / 4)
         self.speed     = 0.0
         self.steering  = 0.0
-        self.trajectory = [list(sp)]
+        self.trajectory = [list(self.pos)]
         self.traversed = 0.0
         self.sim_time  = 0.0
         self.collision    = False
+        self.collision_count = 0
+        self.first_collision_pos = None
         self.goal_reached = False
         self.step_acc  = 0.0
 
         # Build bang-bang open-loop edge plans if available
         self.bb_edge_plans = None
+        self.bb_trajectory = None
         if not self.path:
             self.status = "NO PATH FOUND"
             self.paused = True
             return
         if self.bb_plan_result is not None:
-            controls = self.bb_plan_result.get('controls', [])
-            if controls:
-                self._build_bb_edge_plans()
+            traj = self.bb_plan_result.get('trajectory', None)
+            if traj is not None and hasattr(traj, 'shape') and traj.shape[0] > 1:
+                self.bb_trajectory = traj
+            else:
+                controls = self.bb_plan_result.get('controls', [])
+                if controls:
+                    self._build_bb_edge_plans()
 
         # Path tracking controller (always create — used for steering in hybrid mode)
         self.pp = _make_controller(self.config)
@@ -604,8 +644,14 @@ class PygameSimulation:
         dy = self.pos[1] - prev[1]
         self.traversed += math.hypot(dx, dy)
 
-        # ── collision (disabled — path quality handled by planner) ──
+        # ── executed-trajectory collision check (rectangular OBB) ──
         r, c = self.pos
+        if self._rect_collision_fn is not None:
+            if self._rect_collision_fn(c, r, self.heading):
+                if not self.collision:
+                    self.first_collision_pos = (r, c)
+                self.collision = True
+                self.collision_count += 1
 
         # ── goal check ──
         gr, gc = self.path[-1]
@@ -622,7 +668,7 @@ class PygameSimulation:
             print(f"  Path Length:        {self.traversed:.3f} units (reference)")
             print(f"  Planned Distance:   {self.planned_distance:.3f} units")
             print(f"  Path Efficiency:    {(self.planned_distance / max(self.traversed, 0.01) * 100):.1f}%")
-            print(f"  Collisions:         {1 if self.collision else 0}")
+            print(f"  Collisions:         {self.collision_count}")
             print(f"  Status:             {'[QUALIFIED]' if not self.collision else '[DISQUALIFIED]'}")
             print("="*60)
             print("Lower time is better - be the fastest!")
@@ -1153,7 +1199,15 @@ class BenchmarkSimulation:
         # ── Convert metric speeds ──
         self._convert_metric_speeds()
         self.render_mpc = self.meters_per_cell
-        
+
+        # ── Rectangular collision check (matches drawn body exactly) ──
+        from bangbang_rrt_star import make_rect_collision_fn
+        _grid_walls = (np.asarray(self.maze.get_grid_representation()) == 1).astype(int)
+        _half_w = (self.robot.wheelbase / self.render_mpc) / 2.0
+        _half_l = _half_w * 1.1
+        self._rect_collision_fn = make_rect_collision_fn(
+            _grid_walls, _half_l, _half_w)
+
         # ── timestep ──
         mc = self.config.get("micromouse", {})
         self.dt = mc.get("dt", 0.05)
@@ -1176,6 +1230,15 @@ class BenchmarkSimulation:
             # Store full result for open-loop execution
             self.bb_plan_result = result
             # Wrapper returns (col, row); simulation expects (row, col)
+            self.path = [(w[1], w[0]) for w in result['waypoints']]
+            self.planned_distance = result.get('extra', {}).get(
+                'path_length_cells', result['cost'])
+        elif planner_key == "bb_rrt_star_theta":
+            from experiments.planner_wrappers import plan_bb_rrt_star_theta
+            start_xy = (self.maze.start[1], self.maze.start[0])
+            goal_xy  = (self.maze.goal[1], self.maze.goal[0])
+            result = plan_bb_rrt_star_theta(self.maze, start_xy, goal_xy, self.config)
+            self.bb_plan_result = result
             self.path = [(w[1], w[0]) for w in result['waypoints']]
             self.planned_distance = result.get('extra', {}).get(
                 'path_length_cells', result['cost'])
@@ -1203,11 +1266,17 @@ class BenchmarkSimulation:
 
         # ── Build bang-bang open-loop edge plans if available ──
         self.bb_edge_plans = None
+        self.bb_trajectory = None
         self.bb_current_edge = 0
         self.bb_total_time = 0.0
-        controls = self.bb_plan_result.get('controls', []) if self.bb_plan_result else []
-        if controls:
-            self._build_bb_edge_plans()
+        if self.bb_plan_result is not None:
+            traj = self.bb_plan_result.get('trajectory', None)
+            if traj is not None and hasattr(traj, 'shape') and traj.shape[0] > 1:
+                self.bb_trajectory = traj
+            else:
+                controls = self.bb_plan_result.get('controls', [])
+                if controls:
+                    self._build_bb_edge_plans()
 
         # Always create a closed-loop controller (used for steering in hybrid mode)
         self.pp = _make_controller(self.config)
@@ -1218,13 +1287,21 @@ class BenchmarkSimulation:
         
         # ── Initialize state ──
         sp = self.maze.start
-        self.pos = list(sp)
-        self.heading = mc.get("initial_heading", math.pi / 4)
+        self.pos = [sp[0] + 0.5, sp[1] + 0.5]  # cell center
+        # Face toward first waypoint (auto-adapts to any maze)
+        if len(self.path) > 1:
+            dr = self.path[1][0] - self.pos[0]
+            dc = self.path[1][1] - self.pos[1]
+            self.heading = math.atan2(dc, dr)
+        else:
+            self.heading = mc.get("initial_heading", math.pi / 4)
         self.speed = 0.0
         self.steering = 0.0
         self.traversed = 0.0
         self.sim_time = 0.0
         self.collision = False
+        self.collision_count = 0
+        self.first_collision_pos = None
         self.goal_reached = False
         self.robot.stop()
         
@@ -1339,28 +1416,11 @@ class BenchmarkSimulation:
         return v, plan['heading']
     
     def _check_collision(self, r, c):
-        """Check if position collides with walls or is out of bounds."""
-        # Out of bounds check
+        """Check if position collides with obstacles or is out of bounds."""
         if not (0 <= r < self.maze.row and 0 <= c < self.maze.col):
             return True
-
-        wheelbase_meters = self.robot.wheelbase
-        body_width_grid = wheelbase_meters / self.meters_per_cell
-        collision_radius = body_width_grid / 2.0
-        
-        # Check grid cells around robot
-        check_radius = int(math.ceil(collision_radius)) + 1
-        for dr in range(-check_radius, check_radius + 1):
-            for dc in range(-check_radius, check_radius + 1):
-                gr = int(round(r + dr))
-                gc = int(round(c + dc))
-                
-                if 0 <= gr < self.maze.row and 0 <= gc < self.maze.col:
-                    if self.maze.map[gr][gc].state == "#":
-                        # Check actual distance
-                        dist = math.hypot(r - gr, c - gc)
-                        if dist < collision_radius:
-                            return True
+        if self._rect_collision_fn is not None:
+            return self._rect_collision_fn(c, r, self.heading)
         return False
     
     def run(self):
@@ -1378,7 +1438,25 @@ class BenchmarkSimulation:
             # ── Save old position for distance tracking ──
             old_pos = list(self.pos)
             
-            if self.bb_edge_plans is not None:
+            if self.bb_trajectory is not None:
+                # ── Dubins trajectory interpolation ──
+                v_plan = float(np.interp(self.sim_time, self.bb_trajectory[:, 4],
+                                         self.bb_trajectory[:, 3]))
+                heading = float(np.interp(self.sim_time, self.bb_trajectory[:, 4],
+                                          self.bb_trajectory[:, 2]))
+                self.speed = v_plan
+                self.heading = heading
+                self.steering = 0.0
+
+                spd_meters = v_plan * self.render_mpc
+                v_wheel = spd_meters / self.robot.wheel_radius
+                self.robot.set_wheel_velocities(v_wheel, v_wheel, self.dt)
+                actual_v_meters, _ = self.robot.update_kinematics(self.dt)
+                actual_v = actual_v_meters / self.render_mpc
+
+                self.pos[0] += actual_v * math.cos(heading) * self.dt
+                self.pos[1] += actual_v * math.sin(heading) * self.dt
+            elif self.bb_edge_plans is not None:
                 # ── hybrid: bang-bang velocity through diff-drive physics ──
                 spd, heading = self._bb_get_control(self.sim_time)
                 self.speed = spd
@@ -1426,8 +1504,10 @@ class BenchmarkSimulation:
             # ── Check collision ──
             r, c = self.pos
             if self._check_collision(r, c):
+                if not self.collision:
+                    self.first_collision_pos = (r, c)
                 self.collision = True
-                break
+                self.collision_count += 1
             
             # ── Check goal ──
             gr, gc = self.path[-1]
@@ -1452,7 +1532,7 @@ class BenchmarkSimulation:
         print(f"  Path Length:        {self.traversed:.3f} units (reference)")
         print(f"  Planned Distance:   {self.planned_distance:.3f} units")
         print(f"  Path Efficiency:    {(self.planned_distance / max(self.traversed, 0.01) * 100):.1f}%")
-        print(f"  Collisions:         {1 if self.collision else 0}")
+        print(f"  Collisions:         {self.collision_count}")
         
         if self.collision:
             print(f"  Status:             [DISQUALIFIED] (collision)")

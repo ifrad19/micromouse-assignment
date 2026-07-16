@@ -11,7 +11,7 @@ maze_file: "/tmp/bench/AAMC15Maze.csv"
 # PATH PLANNER SELECTION
 # =============================================================================
 # Choose which path planning algorithm to use
-# Options: "astar", "theta_star", "rrt", "bb_rrt_star"
+# Options: "astar", "theta_star", "rrt", "rrt_grid_smooth", "bb_rrt_star", "bb_rrt_star_theta"
 path_planner: "rrt"
 
 # =============================================================================
@@ -116,7 +116,7 @@ bb_rrt_star:
   rewire_k: 40                 # max neighbours in X_near
   seed: 42                     # RNG seed (reproducible)
   goal_tolerance: 0.6          # cells
-  robot_radius: 0.5            # clearance from walls (cells) for line-of-sight checks
+  robot_radius: 0.28            # 0.05m half-width / 0.18m cell (standard 16×16 maze)
 # MAZE UPSAMPLING (Optional - not needed for traditional micromouse)
 # =============================================================================
 # Traditional micromouse uses cell-level planning on 16×16 grid (upsampling disabled).

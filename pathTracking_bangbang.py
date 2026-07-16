@@ -246,6 +246,115 @@ def execute_bangbang_trajectory(plan_result, config, meters_per_cell=1.0,
     }
 
 
+# --- Dubins + bang-bang trajectory execution ---
+
+
+def execute_dubins_bangbang_trajectory(plan_result, config, meters_per_cell=1.0,
+                                        render_fn=None, max_time_factor=2.0,
+                                        goal_xy=None, goal_tolerance=0.6,
+                                        collision_fn=None,
+                                        verbose=False):
+    """Execute a Dubins + bang-bang trajectory through the diff-drive.
+
+    Args:
+        plan_result: dict returned by BangBangRRTStarTheta.plan().
+                     Must contain 'trajectory' with columns [x, y, theta, v, t].
+        config: full YAML config dict
+        meters_per_cell: physical metres per maze cell
+        render_fn: optional callable(pos, heading, t) for live visualisation
+        max_time_factor: stop if elapsed > total_planned_time * this factor
+        goal_xy: (gy, gx) goal position (maze (row, col) coords)
+        goal_tolerance: distance from goal considered "reached"
+        collision_fn: callable (row, col) -> bool (True = in collision)
+
+    Returns dict with 'trajectory', 'completion_time', 'reached_goal',
+    'collided', 'planned_time', 'planned_distance'.
+    """
+    if plan_result is None:
+        return {
+            'trajectory': [], 'completion_time': 0.0, 'reached_goal': False,
+            'collided': False, 'planned_time': 0.0, 'planned_distance': 0.0,
+        }
+
+    trajectory = plan_result.get('trajectory')
+    if trajectory is None or trajectory.shape[0] < 2:
+        return {
+            'trajectory': [], 'completion_time': 0.0, 'reached_goal': False,
+            'collided': False, 'planned_time': 0.0, 'planned_distance': 0.0,
+        }
+
+    robot = DifferentialDriveRobot(config)
+    dt = config.get('micromouse', {}).get('dt', 0.01667)
+    total_time = float(trajectory[-1, 4])
+
+    traj_log = []
+    sim_t = 0.0
+    collision = False
+    reached_goal = False
+    max_sim_t = total_time * max_time_factor
+    robot.wheel_vel_left = 0.0
+    robot.wheel_vel_right = 0.0
+
+    r, c = float(trajectory[0, 1]), float(trajectory[0, 0])
+    heading = float(trajectory[0, 2])
+    n_steps = int(math.ceil(max_sim_t / dt)) + 1
+
+    if verbose:
+        print(f"  [dubins_openloop] starting: {n_steps} steps, "
+              f"planned_time={total_time:.3f}s, trajectory={trajectory.shape[0]} samples")
+
+    for step in range(n_steps):
+        if sim_t >= total_time - 1e-9:
+            break
+
+        v_plan = float(np.interp(sim_t, trajectory[:, 4], trajectory[:, 3]))
+        theta_plan = float(np.interp(sim_t, trajectory[:, 4], trajectory[:, 2]))
+
+        v_linear_mps = v_plan * meters_per_cell
+        v_wheel_target = v_linear_mps / robot.wheel_radius
+        robot.set_wheel_velocities(v_wheel_target, v_wheel_target, dt)
+
+        actual_v_m_per_s, actual_omega = robot.update_kinematics(dt)
+        actual_v_cells = actual_v_m_per_s / meters_per_cell
+
+        heading = theta_plan
+        r += actual_v_cells * math.cos(heading) * dt
+        c += actual_v_cells * math.sin(heading) * dt
+
+        sim_t += dt
+        traj_log.append((r, c, heading, sim_t, actual_v_cells))
+
+        if render_fn is not None:
+            render_fn((r, c), heading, sim_t)
+
+        if not (math.isfinite(r) and math.isfinite(c)):
+            collision = True
+            if verbose:
+                print(f"  [dubins_openloop] NaN at step {step}, t={sim_t:.3f}")
+            break
+        if collision_fn is not None and collision_fn(r, c):
+            collision = True
+            if verbose:
+                print(f"  [dubins_openloop] collision at ({r:.2f},{c:.2f}), t={sim_t:.3f}")
+            break
+
+    if goal_xy is not None:
+        gr, gc = goal_xy
+        if math.hypot(r - gr, c - gc) < goal_tolerance:
+            reached_goal = True
+
+    planned_distance = float(np.sum(np.sqrt(np.sum(np.diff(trajectory[:, :2], axis=0) ** 2, axis=1))))
+
+    return {
+        'trajectory': traj_log,
+        'completion_time': sim_t,
+        'reached_goal': reached_goal,
+        'collided': collision,
+        'planned_time': total_time,
+        'planned_distance': planned_distance,
+    }
+
+
 # --- Smoke test ---
 
 
